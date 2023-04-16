@@ -1,5 +1,5 @@
 
-from fastapi import HTTPException, status, Header, Depends
+from fastapi import HTTPException, status, Header, Depends, Response
 from ext.db_connection import users_collection, session_store
 import bcrypt
 from loguru import logger
@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer
 security = HTTPBearer()
 
 
-def login(user: LoginBase):
+def login(user: LoginBase, response: Response):
     logger.info(f" !! LogIn path !!")
     logger.info(f"getting user {user.email} from DB")
     user_dict = users_collection.find_one({'email': user.email})
@@ -20,6 +20,7 @@ def login(user: LoginBase):
         hashed_password = user_dict['password'].encode('utf-8')
         if bcrypt.checkpw(user.password.encode('utf-8'), hashed_password):
             token = generate_session(user_dict)
+            response.set_cookie(key="user", value=user_dict['nickname'], httponly=True)
             return {'access_token': token, 'token_type': 'bearer'}
         logger.error(f"Invalid password")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
